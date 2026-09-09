@@ -4,31 +4,187 @@
   <meta charset="utf-8">
   <title>{% block title %}防災アプリ{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blue: #2d5eaa;
+      --blue-dark: #24529b;
+      --text: #244e91;
+      --muted: #687b91;
+      --green: #22a35a;
+      --surface: #ffffff;
+      --page: #f7f9fc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: #33465d;
+      background: var(--page);
+      font-family: "Noto Sans JP", sans-serif;
+      font-size: 14px;
+    }
+
+    .site-header {
+      height: 54px;
+      color: white;
+      background: var(--blue);
+      box-shadow: 0 1px 5px rgba(25, 60, 110, .2);
+    }
+
+    .header-inner {
+      width: min(1080px, calc(100% - 32px));
+      height: 100%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      margin: 0;
+      color: white;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+
+    .menu-button {
+      border: 0;
+      color: white;
+      background: transparent;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .site-nav {
+      display: none;
+      padding: 12px 16px;
+      background: var(--blue-dark);
+      text-align: right;
+    }
+
+    .site-nav.is-open { display: block; }
+
+    .site-nav a {
+      margin-left: 16px;
+      color: white;
+      text-decoration: none;
+    }
+
+    main {
+      width: min(710px, calc(100% - 32px));
+      margin: 25px auto 48px;
+    }
+
+    .home-section {
+      margin-bottom: 27px;
+      padding: 20px 21px 24px;
+      border: 1px solid #edf1f6;
+      border-radius: 15px;
+      background: var(--surface);
+      box-shadow: 0 5px 18px rgba(42, 72, 105, .07);
+    }
+
+    .section-heading {
+      margin: 0 0 14px;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .heading-icon { margin-right: 7px; }
+
+    #shelterMap {
+      height: 284px;
+      overflow: hidden;
+      border-radius: 9px;
+    }
+
+    .weather-heading-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .refresh-label {
+      flex: 0 0 auto;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .weather-panel {
+      min-height: 137px;
+      padding: 14px 15px 10px;
+      border-radius: 8px;
+      background: #f7f8fa;
+    }
+
+    .weather-panel p { margin: 0 0 10px; }
+    .weather-panel p:last-child { margin-bottom: 0; }
+    .weather-ok { color: var(--green); font-weight: 700; }
+    .weather-meta { color: var(--muted); font-size: 12px; }
+
+    .level-label {
+      flex: 0 0 auto;
+      color: #b06c16;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .landslide-section { padding-bottom: 20px; }
+    .landslide-panel {
+      padding: 13px 15px 11px;
+      border-left: 4px solid #f0b34e;
+      border-radius: 5px;
+      background: #fffaf0;
+    }
+    .landslide-panel p { margin: 0 0 8px; }
+    .landslide-panel p:last-child { margin-bottom: 0; }
+    .landslide-alert { color: #c7442e; }
+
+    @media (max-width: 560px) {
+      main { width: min(100% - 20px, 710px); margin-top: 16px; }
+      .home-section { padding: 16px 14px 18px; }
+      .weather-heading-row { align-items: flex-start; flex-direction: column; gap: 2px; }
+      #shelterMap { height: 250px; }
+    }
+  </style>
 </head>
 <body>
-  <!-- ヘッダー -->
-  <h1>防災アプリ</h1>
-
-  <!-- ナビゲーション -->
-  <nav>
-    <a href="/">ホーム</a> |
-    <a href="/shelter_search">避難所検索</a> |
-    <a href="/shelter_register">避難所登録</a> |
-    <a href="/board">指示・発信ボード</a>
-    ｜
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="brand">防災アプリ</h1>
+      <button class="menu-button" type="button" aria-label="メニューを開く" aria-expanded="false">☰</button>
+    </div>
+    <nav class="site-nav">
+      <a href="/">ホーム</a>
+      <a href="/shelter_search">避難所検索</a>
+      <a href="/shelter_register">避難所登録</a>
+      <a href="/board">指示・発信ボード</a>
     {% if session.logged_in %}
-      ログイン中{% if session.username %}（{{ session.username }}）{% endif %}
       <a href="/logout">ログアウト</a>
     {% else %}
-      未ログイン
       <a href="/login">ログイン</a>
     {% endif %}
-  </nav>
-  <hr>
+    </nav>
+  </header>
 
   <main>
-    <!-- ここに子テンプレートの content が入る -->
     {% block content %}{% endblock %}
   </main>
+  <script>
+    const menuButton = document.querySelector('.menu-button');
+    const siteNav = document.querySelector('.site-nav');
+    menuButton.addEventListener('click', function() {
+      const isOpen = siteNav.classList.toggle('is-open');
+      menuButton.setAttribute('aria-expanded', String(isOpen));
+    });
+  </script>
 </body>
 </html>

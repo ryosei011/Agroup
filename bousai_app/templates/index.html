@@ -1,16 +1,33 @@
 {% extends "base.html" %}
 
-{% block content %}
-<!-- 避難所マップ -->
-<h2>避難所マップ</h2>
-<div id="shelterMap" style="height: 300px;"></div>
+{% block title %}ホーム - 防災アプリ{% endblock %}
 
-<!-- 気象警報・注意報 -->
-<h2>青森市 気象警報・注意報</h2>
-<p>10分おきに自動更新されます。</p>
-<div id="weatherContent">
-  <p>読み込み中...</p>
-</div>
+{% block content %}
+<section class="home-section" aria-labelledby="map-heading">
+    <h2 id="map-heading" class="section-heading"><span class="heading-icon">📍</span>避難所マップ</h2>
+    <div id="shelterMap"></div>
+</section>
+
+<section class="home-section" aria-labelledby="weather-heading">
+    <div class="weather-heading-row">
+        <h2 id="weather-heading" class="section-heading"><span class="heading-icon">☁</span>青森市 気象警報・注意報</h2>
+        <span class="refresh-label">↻ 10分おき自動更新</span>
+    </div>
+    <div id="weatherContent" class="weather-panel">
+        <p>読み込み中...</p>
+    </div>
+</section>
+
+<section class="home-section landslide-section" aria-labelledby="landslide-heading">
+    <div class="weather-heading-row">
+        <h2 id="landslide-heading" class="section-heading"><span class="heading-icon">⛰</span>土砂災害関連情報</h2>
+        <span class="level-label">警戒レベル4相当</span>
+    </div>
+    <div class="landslide-panel">
+        <p id="landslideStatus"><strong>読み込み中...</strong></p>
+        <p id="landslideGuidance" class="weather-meta">大雨のときは、気象庁の危険度分布と避難所情報をあわせて確認してください。</p>
+    </div>
+</section>
 
 <!-- Leaflet の読み込み -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -18,8 +35,8 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 地図の初期化（藤沢市周辺を中心に設定）
-    const map = L.map('shelterMap').setView([35.3390, 139.4903], 12);
+    // 地図の初期化（青森市周辺を中心に設定）
+    const map = L.map('shelterMap').setView([40.8221, 140.7474], 12);
 
     // OpenStreetMapタイルを追加
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -41,9 +58,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateWeatherContent(data) {
         const weatherContent = document.getElementById('weatherContent');
+        updateLandslideContent(data);
 
         if (data.error) {
-            weatherContent.innerHTML = '<p>気象情報の取得に失敗しました</p>';
+            weatherContent.innerHTML = '<p class="weather-ok">現在、気象情報を取得できません</p>';
             return;
         }
 
@@ -55,15 +73,38 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             warningsHtml += '</ul>';
         } else {
-            warningsHtml = '<p>現在、警報・注意報は発表されていません</p>';
+            warningsHtml = '<p class="weather-ok">● 現在、警報・注意報は発表されていません</p>';
         }
 
         weatherContent.innerHTML = `
-            <p>対象地域: ${data.area_name || '青森市'}</p>
+            <p>📍 ${data.area_name || '青森市'}</p>
             ${warningsHtml}
-            <p>最終確認: <span id="lastFetchTime">${data.last_fetch_time || '更新中...'}</span></p>
-            <p>気象庁最終発表: ${data.report_time || '不明'}</p>
+            <p class="weather-meta">◷ データ取得: <span id="lastFetchTime">${data.last_fetch_time || '更新中...'}</span></p>
+            <p class="weather-meta">♨ 気象庁発表: ${data.report_time || '不明'}</p>
         `;
+    }
+
+    function updateLandslideContent(data) {
+        const status = document.getElementById('landslideStatus');
+        const guidance = document.getElementById('landslideGuidance');
+        if (data.error) {
+            status.innerHTML = '<strong>土砂災害関連情報を取得できません</strong>';
+            guidance.textContent = '気象庁の情報を確認できるまで、最新の避難情報を確認してください。';
+            return;
+        }
+
+        const landslideWarning = (data.warnings || []).find(warning =>
+            warning.code === '09' || warning.code === '29'
+        );
+
+        if (!landslideWarning) {
+            status.innerHTML = '<strong class="weather-ok">土砂災害関連の警報・注意報は発表されていません</strong>';
+            guidance.textContent = '大雨のときは、気象庁の危険度分布と避難所情報をあわせて確認してください。';
+            return;
+        }
+
+        status.innerHTML = `<strong class="landslide-alert">${landslideWarning.name}が発表されています</strong>`;
+        guidance.textContent = '対象区域では、自治体からの避難情報と危険度分布を確認してください。';
     }
 
     // 初回表示＋10分（600,000ミリ秒）おきに自動更新
