@@ -3,10 +3,27 @@
 {% block title %}ホーム - 防災アプリ{% endblock %}
 
 {% block content %}
-<section class="home-section" aria-labelledby="map-heading">
-    <h2 id="map-heading" class="section-heading"><span class="heading-icon">📍</span>避難所マップ</h2>
-    <div id="shelterMap"></div>
-</section>
+<div class="home-top">
+    <section class="home-section home-map-card" aria-labelledby="map-heading">
+        <h2 id="map-heading" class="section-heading"><span class="heading-icon">📍</span>避難所マップ</h2>
+        <div id="shelterMap"></div>
+    </section>
+
+    <section class="home-section shelter-control-card" aria-labelledby="shelter-select-heading">
+        <label id="shelter-select-heading" for="shelterSelect">避難所選択</label>
+        <select id="shelterSelect" class="shelter-select">
+            <option value="">避難所を選択してください</option>
+            {% for shelter in shelters %}
+            <option value="{{ shelter.id }}">{{ shelter.name }}</option>
+            {% endfor %}
+        </select>
+        <div class="shelter-actions">
+            <button id="shelterConfirm" type="button">決定</button>
+            <button id="shelterBack" type="button">戻る</button>
+        </div>
+        <p id="shelterMessage" class="shelter-message" role="status" aria-live="polite"></p>
+    </section>
+</div>
 
 <section class="home-section" aria-labelledby="weather-heading">
     <div class="weather-heading-row">
@@ -42,6 +59,27 @@ document.addEventListener('DOMContentLoaded', function() {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
+
+    const shelterSelect = document.getElementById('shelterSelect');
+    const shelterMessage = document.getElementById('shelterMessage');
+
+    document.getElementById('shelterConfirm').addEventListener('click', function() {
+        const selectedShelter = shelterSelect.options[shelterSelect.selectedIndex];
+        shelterMessage.className = 'shelter-message';
+
+        if (!shelterSelect.value) {
+            shelterMessage.textContent = '避難所を選択してください。';
+            shelterMessage.classList.add('is-error');
+            return;
+        }
+
+        shelterMessage.textContent = `${selectedShelter.text}を選択しました。`;
+        shelterMessage.classList.add('is-success');
+    });
+
+    document.getElementById('shelterBack').addEventListener('click', function() {
+        window.location.href = '/shelter_search';
+    });
 
     // 気象警報・注意報の自動更新機能
     function updateWeatherWarnings() {
