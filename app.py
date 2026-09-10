@@ -1,9 +1,10 @@
 from flask import Flask, jsonify, request, render_template, session, redirect, url_for
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, quote
 from functools import wraps
 import json
 import os
 import urllib.request
+import math
 from datetime import datetime, timedelta, timezone
 
 # app.py はプロジェクト直下に置く。
@@ -93,6 +94,120 @@ def load_json(path, default):
 
 shelters = load_json(DATA_FILE, [])
 instructions = load_json(INSTRUCTIONS_FILE, [])
+
+STATUS_VALUES = ('◎', '○', '△', '×')
+SORT_FIELDS = {
+    '混雑状況': 'crowd_status',
+    '物資状況': 'supply_status',
+    '被害状況': 'damage_status',
+}
+CRITERIA_ALIASES = {
+    '混雑度': '混雑状況',
+    '物資充実度': '物資状況',
+    '被災度': '被害状況',
+}
+STATUS_RANK = {status: rank for rank, status in enumerate(STATUS_VALUES)}
+RESULTS_PER_PAGE = 5
+GEOCODE_CACHE = {}
+
+
+def save_shelters():
+    """避難所データを保存する"""
+    try:
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(shelters, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception:
+        return False
+
+
+def parse_coordinate(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def geocode_address(address):
+    """住所をジオコードする。未設定・失敗時は座標を推測しない。"""
+    address = (address or '').strip()
+    if not address:
+        return None, None
+    if address in GEOCODE_CACHE:
+        return GEOCODE_CACHE[address]
+
+    try:
+        query = quote(address)
+        url = f'https://nominatim.openstreetmap.org/search?q={query}&format=json&limit=1'
+        request = urllib.request.Request(url, headers={'User-Agent': 'bousai-app/1.0'})
+        with urllib.request.urlopen(request, timeout=5) as response:
+            matches = json.loads(response.read())
+        if matches:
+            coordinates = (
+                parse_coordinate(matches[0].get('lat')),
+                parse_coordinate(matches[0].get('lon'))
+            )
+            GEOCODE_CACHE[address] = coordinates
+            return coordinates
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        pass
+    return None, None
+
+
+def get_reference_coordinates():
+    latitude = parse_coordinate(os.environ.get('BOUSAI_REFERENCE_LATITUDE'))
+    longitude = parse_coordinate(os.environ.get('BOUSAI_REFERENCE_LONGITUDE'))
+    if latitude is not None and longitude is not None:
+        return latitude, longitude, os.environ.get('BOUSAI_REFERENCE_ADDRESS', '')
+
+    address = os.environ.get('BOUSAI_REFERENCE_ADDRESS', '').strip()
+    if address:
+        latitude, longitude = geocode_address(address)
+        return latitude, longitude, address
+    return None, None, ''
+
+
+def haversine_km(latitude1, longitude1, latitude2, longitude2):
+    radius_km = 6371.0088
+    lat1, lat2 = math.radians(latitude1), math.radians(latitude2)
+    delta_lat = math.radians(latitude2 - latitude1)
+    delta_lon = math.radians(longitude2 - longitude1)
+    value = (math.sin(delta_lat / 2) ** 2
+             + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2) ** 2)
+    return radius_km * 2 * math.atan2(math.sqrt(value), math.sqrt(1 - value))
+
+
+def distance_status(distance_km):
+    if distance_km is None:
+        return '×'
+    if distance_km <= 1:
+        return '◎'
+    if distance_km <= 5:
+        return '○'
+    return '△'
+
+
+def enrich_shelter(shelter, reference_coordinates):
+    item = dict(shelter)
+    latitude = parse_coordinate(item.get('latitude'))
+    longitude = parse_coordinate(item.get('longitude'))
+    address = item.get('address', '').strip()
+    if (latitude is None or longitude is None) and address:
+        latitude, longitude = geocode_address(address)
+        if latitude is not None and longitude is not None:
+            item['latitude'] = latitude
+            item['longitude'] = longitude
+
+    distance_km = None
+    if reference_coordinates[0] is not None and latitude is not None and longitude is not None:
+        distance_km = haversine_km(
+            reference_coordinates[0], reference_coordinates[1], latitude, longitude
+        )
+    item['distance_km'] = distance_km
+    item['distance_status'] = distance_status(distance_km)
+    item['latitude'] = latitude
+    item['longitude'] = longitude
+    return item
 
 def save_instructions():
     """指示ボードのデータをファイルに保存する"""
@@ -285,35 +400,69 @@ def logout():
 @app.route('/shelter_register', methods=['GET', 'POST'])
 @login_required
 def shelter_register():
+    name = ''
+    error = False
+    success = False
+    message = ''
+
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
+        registration_type = request.form.get('registration_type', 'pre')
+        if registration_type == 'post':
+            name = request.form.get('shelter_name', '').strip()
+
         if not name:
-            return render_template(
-                'shelter_register.html',
-                error=True,
-                message='避難所名を入力してください。'
-            )
+            error = True
+            message = '避難所名を入力してください'
+        elif not any(shelter.get('name') == name for shelter in shelters):
+            error = True
+            message = 'エラー：登録されていない避難所名です。'
+        else:
+            shelter = next(shelter for shelter in shelters if shelter.get('name') == name)
+            if registration_type == 'post':
+                crowd_status = request.form.get('crowd_status', '').strip()
+                supply_status = request.form.get('supply_status', '').strip()
+                damage_status = request.form.get('damage_status', '').strip()
+                opening_status = request.form.get('opening_status', '').strip()
+                if (crowd_status not in STATUS_VALUES
+                        or supply_status not in STATUS_VALUES
+                        or damage_status not in STATUS_VALUES):
+                    error = True
+                    message = '混雑状況、物資状況、被害状況を選択してください。'
+                elif opening_status not in ('未開設', '開設準備中', '開設中'):
+                    error = True
+                    message = '開催状況ステータスを選択してください。'
+                else:
+                    shelter['crowd_status'] = crowd_status
+                    shelter['supply_status'] = supply_status
+                    shelter['damage_status'] = damage_status
+                    shelter['opening_status'] = opening_status
+                    shelter['updated_at'] = datetime.now(JST).isoformat()
+                    if not save_shelters():
+                        error = True
+                        message = '避難所情報を保存できませんでした。'
+                    else:
+                        success = True
+                        message = '事後登録を更新しました！'
+            else:
+                address = request.form.get('address', '').strip()
+                shelter['address'] = address
+                shelter['updated_at'] = datetime.now(JST).isoformat()
+                if not save_shelters():
+                    error = True
+                    message = '避難所情報を保存できませんでした。'
+                else:
+                    success = True
+                    message = '登録完了しました！'
 
-        next_id = max((shelter.get('id', 0) for shelter in shelters), default=0) + 1
-        shelters.append({'id': next_id, 'name': name})
-        try:
-            with open(DATA_FILE, 'w', encoding='utf-8') as data_file:
-                json.dump(shelters, data_file, ensure_ascii=False, indent=2)
-        except OSError:
-            shelters.pop()
-            return render_template(
-                'shelter_register.html',
-                error=True,
-                message='避難所情報を保存できませんでした。'
-            )
-
-        return render_template(
-            'shelter_register.html',
-            success=True,
-            message='避難所を登録しました。'
-        )
-
-    return render_template('shelter_register.html')
+    return render_template(
+        'shelter_register.html',
+        shelters=shelters,
+        name=name,
+        error=error,
+        success=success,
+        message=message
+    )
 
 # 避難所検索ページ
 @app.route('/shelter_search')
@@ -323,7 +472,7 @@ def shelter_search():
 # 全施設一覧ページ
 @app.route('/all_shelters')
 def all_shelters():
-    return render_template('search_results.html', results=shelters)
+    return redirect(url_for('search_results'))
 
 
 # 指示ボード：住民向けの指示を登録・一覧表示する
@@ -400,11 +549,51 @@ def board_delete():
 @app.route('/search_results')
 def search_results():
     criteria = request.args.get('criteria', '').strip()
-    results = filter_shelters(request.args.get('district'))
+    criteria = CRITERIA_ALIASES.get(criteria, criteria)
+    district = request.args.get('district')
+    crowd_status = request.args.get('crowd_status', '').strip()
+    supply_status = request.args.get('supply_status', '').strip()
+    results = filter_shelters(district)
+    if crowd_status in STATUS_VALUES:
+        results = [s for s in results if s.get('crowd_status') == crowd_status]
+    if supply_status in STATUS_VALUES:
+        results = [s for s in results if s.get('supply_status') == supply_status]
+    sort_field = SORT_FIELDS.get(criteria)
+    if sort_field:
+        results = sorted(
+            results,
+            key=lambda shelter: STATUS_RANK.get(shelter.get(sort_field), len(STATUS_VALUES))
+        )
+
+    page = request.args.get('page', 1, type=int)
+    total_count = len(results)
+    total_pages = max(1, math.ceil(total_count / RESULTS_PER_PAGE))
+    page = min(max(page, 1), total_pages)
+    start_index = (page - 1) * RESULTS_PER_PAGE
+    end_index = min(start_index + RESULTS_PER_PAGE, total_count)
+    reference_coordinates = get_reference_coordinates()
+    enriched_results = [
+        enrich_shelter(shelter, reference_coordinates)
+        for shelter in results[start_index:end_index]
+    ]
+
+    query_params = request.args.to_dict(flat=True)
+    query_params.pop('page', None)
+    previous_url = url_for('search_results', **query_params, page=page - 1) if page > 1 else '#'
+    next_url = url_for('search_results', **query_params, page=page + 1) if page < total_pages else '#'
     return render_template(
         'search_results.html',
-        results=results,
-        criteria=criteria
+        results=enriched_results,
+        criteria=criteria,
+        page=page,
+        total_count=total_count,
+        total_pages=total_pages,
+        start_index=start_index + 1 if total_count else 0,
+        end_index=end_index,
+        query_params=query_params,
+        previous_url=previous_url,
+        next_url=next_url,
+        reference_coordinates=reference_coordinates
     )
 
 # JSON API：/shelters?district=地区名

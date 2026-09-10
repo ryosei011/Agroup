@@ -1,23 +1,145 @@
 {% extends "base.html" %}
 
+{% block title %}避難所登録 | 防災アプリ{% endblock %}
+
 {% block content %}
-<h2>避難所登録</h2>
-<p>新しい避難所情報を登録します。</p>
+<style>
+  .register-page { color: #33465d; }
+  .register-page__title { margin: 0 0 18px; color: #244e91; font-size: 24px; }
+  .register-message { margin: 0 0 16px; padding: 10px; border: 1px solid; }
+  .register-message--error { border-color: #d33b3b; color: #a62222; background: #fff5f5; }
+  .register-message--success { border-color: #73a57d; color: #246437; background: #effaf1; }
+  .register-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+  .register-columns > section { padding: 20px; border: 1px solid #edf1f6; border-radius: 15px; background: #fff; box-shadow: 0 5px 18px rgba(42, 72, 105, .07); }
+  .register-panel__heading { margin: 0 0 18px; color: #244e91; font-size: 18px; font-weight: 800; }
+  .register-field { margin: 0 0 15px; }
+  .register-field label, .register-display { display: block; margin-bottom: 5px; font-size: 14px; }
+  .register-display { padding: 7px 2px; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .register-field input[type="text"], .register-field select, .post-register-form select { width: 100%; min-height: 40px; padding: 9px; border: 1px solid #8e9aa6; border-radius: 3px; color: inherit; background: #fff; font: inherit; }
+  .status-fieldset { padding: 0; border: 0; }
+  .status-fieldset legend { margin-bottom: 5px; font-size: 14px; }
+  .suggestions { min-height: 0; margin: -6px 0 15px; }
+  .suggestions__title { margin: 0 0 5px; font-size: 13px; font-weight: 700; }
+  .suggestions button { display: block; width: 100%; padding: 5px 7px; border: 1px solid #b9c3ce; border-top: 0; color: #24529b; background: #f8fafc; text-align: left; cursor: pointer; font: inherit; }
+  .suggestions button:first-of-type { border-top: 1px solid #b9c3ce; }
+  .status-heading { margin: 0 0 8px; font-size: 14px; font-weight: 700; }
+  .choice-row { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 18px; }
+  .choice-list { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 7px 0 18px; }
+  .choice-row label, .choice-list label, .checkbox-label { cursor: pointer; }
+  .supplies-input { width: 100%; min-height: 40px; padding: 9px; border: 1px solid #8e9aa6; border-radius: 3px; font: inherit; }
+  .register-button { display: block; min-width: 78px; margin: 17px 0 0 auto; padding: 9px 18px; border: 0; border-radius: 3px; color: #fff; background: #2d5eaa; cursor: pointer; font: inherit; }
+  .register-button:hover, .register-button:focus { background: #24529b; }
+  .register-placeholder { height: 284px; margin: 18px 0 20px; overflow: hidden; border-radius: 9px; background: #e8eef4; }
+  .register-links { margin: 0; text-align: center; }
+  .register-links a { color: #24529b; }
+  @media (max-width: 700px) {
+    .register-columns { grid-template-columns: 1fr; gap: 14px; }
+    .register-placeholder { height: 250px; }
+  }
+</style>
 
-<!-- 成功・エラーメッセージ表示 -->
-{% if success %}
-  <p>{{ message }}</p>
-{% endif %}
+<section class="register-page">
+  <h2 class="register-page__title">防災アプリ</h2>
+  {% if error %}
+    <p class="register-message register-message--error" role="alert">{{ message }}</p>
+  {% elif success %}
+    <p class="register-message register-message--success" role="status">{{ message }}</p>
+  {% endif %}
 
-{% if error %}
-  <p>{{ message }}</p>
-{% endif %}
+  <div class="register-columns">
+    <section aria-labelledby="pre-register-heading">
+      <h3 id="pre-register-heading" class="register-panel__heading">事前登録画面</h3>
+      <form method="post">
+        <input type="hidden" name="registration_type" value="pre">
+        <div class="register-display">▼ 市区町村</div>
+        <div class="register-display">▼ 避難所名</div>
+        <div class="register-field">
+          <label class="visually-hidden" for="name">避難所名</label>
+          <input id="name" name="name" type="text" placeholder="入力欄" autocomplete="off" value="{{ name }}">
+        </div>
+        <div id="suggestions" class="suggestions" aria-live="polite"></div>
+        <div class="register-field"><label for="address-detail">住所詳細</label><input id="address-detail" type="text" placeholder="入力欄"></div>
+        <div class="register-field"><label for="address">登録住所（地図・距離計算用）</label><input id="address" name="address" type="text" placeholder="入力欄" value="{{ request.form.get('address', '') }}"></div>
+        <div class="register-field"><label for="distance">距離</label><input id="distance" type="text" placeholder="入力欄"></div>
+        <div class="register-field"><label for="contact">責任者 情報 電話番号</label><input id="contact" type="text" placeholder="入力欄"></div>
+        <button class="register-button" type="submit">更新</button>
+      </form>
+    </section>
 
-<form method="POST">
-  <p>
-    <label for="name">避難所名（必須）</label><br>
-    <input type="text" id="name" name="name">
-  </p>
-  <p><button type="submit">登録</button></p>
-</form>
+    <section aria-labelledby="post-register-heading">
+      <h3 id="post-register-heading" class="register-panel__heading">事後登録画面</h3>
+      <form class="post-register-form" method="post">
+        <input type="hidden" name="registration_type" value="post">
+        <div class="register-field"><label for="shelter-name">登録済み避難所</label><select id="shelter-name" name="shelter_name" required><option value="">避難所を選択してください</option>{% for shelter in shelters %}<option value="{{ shelter.name }}" {% if request.form.get('shelter_name') == shelter.name %}selected{% endif %}>{{ shelter.name }}</option>{% endfor %}</select></div>
+        <div class="register-field"><label for="opening-status">開催状況ステータス</label><select id="opening-status" name="opening_status" required><option value="">選択してください</option><option value="未開設">未開設</option><option value="開設準備中">開設準備中</option><option value="開設中">開設中</option></select></div>
+        <fieldset class="register-field status-fieldset"><legend>混雑状況</legend><div class="choice-list"><label><input type="radio" name="crowd_status" value="◎" required> ◎</label><label><input type="radio" name="crowd_status" value="○"> ○</label><label><input type="radio" name="crowd_status" value="△"> △</label><label><input type="radio" name="crowd_status" value="×"> ×</label></div></fieldset>
+        <fieldset class="register-field status-fieldset"><legend>物資状況</legend><div class="choice-list"><label><input type="radio" name="supply_status" value="◎" required> ◎</label><label><input type="radio" name="supply_status" value="○"> ○</label><label><input type="radio" name="supply_status" value="△"> △</label><label><input type="radio" name="supply_status" value="×"> ×</label></div></fieldset>
+        <fieldset class="register-field status-fieldset"><legend>被害状況</legend><div class="choice-list"><label><input type="radio" name="damage_status" value="◎" required> ◎</label><label><input type="radio" name="damage_status" value="○"> ○</label><label><input type="radio" name="damage_status" value="△"> △</label><label><input type="radio" name="damage_status" value="×"> ×</label></div></fieldset>
+        <button class="register-button" type="submit">更新</button>
+      </form>
+    </section>
+  </div>
+
+  <div id="registerMap" class="register-placeholder" aria-label="青森市周辺の避難所地図"></div>
+  <p class="register-links"><a href="/shelter_search">検索画面に戻る</a> | <a href="/">トップページへ戻る</a></p>
+</section>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const registerMap = L.map('registerMap').setView([40.8244, 140.7400], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(registerMap);
+
+  const shelterData = {{ shelters | tojson }};
+  const postShelterSelect = document.getElementById('shelter-name');
+  const statusFields = {
+    crowd_status: document.querySelectorAll('input[name="crowd_status"]'),
+    supply_status: document.querySelectorAll('input[name="supply_status"]'),
+    damage_status: document.querySelectorAll('input[name="damage_status"]'),
+    opening_status: document.getElementById('opening-status')
+  };
+  postShelterSelect.addEventListener('change', function () {
+    const selectedShelter = shelterData.find(function (shelter) {
+      return shelter.name === postShelterSelect.value;
+    });
+    Object.keys(statusFields).forEach(function (field) {
+      const value = selectedShelter && selectedShelter[field] ? selectedShelter[field] : '';
+      if (field === 'opening_status') {
+        statusFields[field].value = value;
+        return;
+      }
+      statusFields[field].forEach(function (radio) {
+        radio.checked = radio.value === value;
+      });
+    });
+  });
+  const nameInput = document.getElementById('name');
+  const suggestions = document.getElementById('suggestions');
+  nameInput.addEventListener('input', function () {
+    const query = nameInput.value.trim().toLowerCase();
+    suggestions.replaceChildren();
+    if (!query) return;
+    const matches = shelterData.filter(function (shelter) {
+      return shelter.name.toLowerCase().includes(query);
+    });
+    const heading = document.createElement('p');
+    heading.className = 'suggestions__title';
+    heading.textContent = matches.length ? '検索結果' : '該当する避難所が見つかりませんでした';
+    suggestions.appendChild(heading);
+    matches.forEach(function (shelter) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = shelter.name;
+      button.addEventListener('click', function () {
+        nameInput.value = shelter.name;
+        suggestions.replaceChildren();
+        nameInput.focus();
+      });
+      suggestions.appendChild(button);
+    });
+  });
+</script>
 {% endblock %}

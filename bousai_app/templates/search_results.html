@@ -1,24 +1,90 @@
 {% extends "base.html" %}
 
+{% block title %}検索結果 | 防災アプリ{% endblock %}
+
 {% block content %}
-<h2>検索結果</h2>
+<style>
+  .results-page { max-width: 920px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; box-shadow: 0 5px 18px rgba(42, 72, 105, .07); }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .results-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+  .results-title { margin: 0; color: #244e91; font-size: 24px; }
+  .results-title span { color: #111; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  .sort-form { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .sort-form label { color: #52657b; font-size: 13px; font-weight: 700; }
+  .sort-form select { min-height: 38px; padding: 6px 30px 6px 10px; border: 1px solid #b9c9dc; border-radius: 4px; color: #33465d; background: #fff; font: inherit; }
+  .results-table-wrap { overflow-x: auto; }
+  .results-table { width: 100%; min-width: 780px; border-collapse: collapse; table-layout: fixed; }
+  .results-table th, .results-table td { border-bottom: 1px solid #e4eaf1; padding: 16px 12px; text-align: center; vertical-align: middle; }
+  .results-table th { color: #405a78; background: #f1f5f9; font-weight: 700; }
+  .results-table th:first-child, .results-table td:first-child { width: 28%; text-align: left; }
+  .shelter-name { display: block; color: #253b57; font-weight: 800; }
+  .opening-status { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; }
+  .opening-status--open { color: #159447; }
+  .opening-status--preparing { color: #d98219; }
+  .opening-status--closed { color: #718096; }
+  .map-link { display: inline-block; margin-top: 5px; color: #2466b1; font-size: 12px; font-weight: 700; }
+  .map-unavailable { display: block; margin-top: 5px; color: #77879a; font-size: 12px; }
+  .status-symbol { display: block; font-size: 27px; line-height: 1.1; font-weight: 800; }
+  .status-good { color: #159447; } .status-normal { color: #168b87; } .status-caution { color: #d98219; } .status-bad { color: #d33b3b; } .status-unknown { color: #718096; }
+  .updated-time, .distance-note { display: block; margin-top: 6px; color: #66788e; font-size: 12px; }
+  .empty-results { padding: 54px 20px; border: 1px solid #e1e8ef; background: #f8fafc; color: #52657b; text-align: center; }
+  .results-controls { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; }
+  .pagination { display: flex; align-items: center; gap: 12px; }
+  .page-button, .refresh-button { min-width: 38px; min-height: 38px; border: 1px solid #b9c9dc; border-radius: 4px; color: #24529b; background: #fff; cursor: pointer; font: inherit; }
+  .page-button[aria-disabled="true"] { color: #aeb9c5; background: #f2f4f6; pointer-events: none; }
+  .refresh-button { padding: 0 18px; color: #fff; background: #2d5eaa; font-weight: 700; }
+  .page-button:focus-visible, .refresh-button:focus-visible, .results-page a:focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
+  .results-links { display: flex; flex-wrap: wrap; gap: 16px; margin: 24px 0 0; padding-top: 18px; border-top: 1px solid #e1e8ef; }
+  .results-links a { color: #24529b; }
+  @media (max-width: 600px) { .results-page { padding: 16px; } .results-heading-row { align-items: stretch; flex-direction: column; gap: 12px; } .results-title { font-size: 21px; } .sort-form { justify-content: space-between; } .sort-form select { flex: 1; } .results-controls { align-items: stretch; flex-direction: column; } .refresh-button { align-self: flex-end; } }
+</style>
 
-{% if request.args.get('criteria') %}
-  <p>絞り込み項目: {{ request.args.get('criteria') }}</p>
-{% endif %}
-
-{% if results %}
-  <ul>
-    {% for shelter in results %}
-    <li>{{ shelter.name }}</li>
-    {% endfor %}
-  </ul>
-{% else %}
-  <p>該当する避難所が見つかりませんでした</p>
-{% endif %}
-
-<p>
-  <a href="/shelter_search">検索画面に戻る</a> |
-  <a href="/">トップページへ戻る</a>
-</p>
+<section class="results-page" aria-labelledby="results-heading">
+  <div class="results-heading-row">
+    <h2 id="results-heading" class="results-title">検索結果（条件：<span>{{ criteria or '指定なし' }}</span>）</h2>
+    <form class="sort-form" method="get" action="{{ url_for('search_results') }}">
+      <label for="result-sort">並び替え</label>
+      <select id="result-sort" name="criteria" onchange="this.form.submit()">
+        <option value="">指定なし</option>
+        <option value="被害状況" {% if criteria == '被害状況' %}selected{% endif %}>被害状況が良い順</option>
+        <option value="混雑状況" {% if criteria == '混雑状況' %}selected{% endif %}>混雑状況が良い順</option>
+        <option value="物資状況" {% if criteria == '物資状況' %}selected{% endif %}>物資状況が良い順</option>
+      </select>
+      {% if request.args.get('district') %}<input type="hidden" name="district" value="{{ request.args.get('district') }}">{% endif %}
+      {% if request.args.get('crowd_status') %}<input type="hidden" name="crowd_status" value="{{ request.args.get('crowd_status') }}">{% endif %}
+      {% if request.args.get('supply_status') %}<input type="hidden" name="supply_status" value="{{ request.args.get('supply_status') }}">{% endif %}
+    </form>
+  </div>
+  {% if results %}
+  <div class="results-table-wrap">
+    <table class="results-table">
+      <caption class="visually-hidden">避難所の検索結果</caption>
+      <thead><tr><th scope="col">避難所名</th><th scope="col">混雑状況</th><th scope="col">物資状況</th><th scope="col">被害状況</th><th scope="col">距離</th></tr></thead>
+      <tbody>
+      {% for shelter in results %}
+        {% set updated = shelter.get('updated_at') or shelter.get('registered_at') %}
+        {% set crowd = shelter.get('crowd_status') %}
+        {% set supply = shelter.get('supply_status') %}
+        {% set damage = shelter.get('damage_status') %}
+        {% set opening = shelter.get('opening_status') %}
+        <tr>
+          <th scope="row"><span class="shelter-name">{{ shelter.get('name', '名称未設定') }}</span>{% if opening %}<span class="opening-status {% if opening == '開設中' %}opening-status--open{% elif opening == '開設準備中' %}opening-status--preparing{% else %}opening-status--closed{% endif %}">{{ opening }}</span>{% endif %}{% if shelter.get('address') %}<a class="map-link" href="https://www.google.com/maps/search/?api=1&amp;query={{ shelter.get('address')|urlencode }}" target="_blank" rel="noopener noreferrer">MAP</a>{% else %}<span class="map-unavailable">MAP（住所未登録）</span>{% endif %}</th>
+          <td><span class="status-symbol {% if crowd == '◎' %}status-good{% elif crowd == '○' %}status-normal{% elif crowd == '△' %}status-caution{% elif crowd == '×' %}status-bad{% else %}status-unknown{% endif %}" aria-label="混雑状況 {{ crowd or '未設定' }}">{{ crowd or '—' }}</span>{% if updated %}<span class="updated-time">{{ updated[11:16] }}更新</span>{% endif %}</td>
+          <td><span class="status-symbol {% if supply == '◎' %}status-good{% elif supply == '○' %}status-normal{% elif supply == '△' %}status-caution{% elif supply == '×' %}status-bad{% else %}status-unknown{% endif %}" aria-label="物資状況 {{ supply or '未設定' }}">{{ supply or '—' }}</span>{% if updated %}<span class="updated-time">{{ updated[11:16] }}更新</span>{% endif %}</td>
+          <td><span class="status-symbol {% if damage == '◎' %}status-good{% elif damage == '○' %}status-normal{% elif damage == '△' %}status-caution{% elif damage == '×' %}status-bad{% else %}status-unknown{% endif %}" aria-label="被害状況 {{ damage or '未設定' }}">{{ damage or '—' }}</span>{% if updated %}<span class="updated-time">{{ updated[11:16] }}更新</span>{% endif %}</td>
+          <td><span class="status-symbol {% if shelter.distance_status == '◎' %}status-good{% elif shelter.distance_status == '○' %}status-normal{% elif shelter.distance_status == '△' %}status-caution{% else %}status-bad{% endif %}" aria-label="距離 {{ shelter.distance_status }}">{{ shelter.distance_status }}</span>{% if shelter.distance_km is not none %}<span class="distance-note">（基準地点から約{{ '%.1f'|format(shelter.distance_km) }}km）</span>{% else %}<span class="distance-note">距離を計算できません</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="results-controls">
+    <nav class="pagination" aria-label="検索結果ページ"><a class="page-button" aria-label="前のページ" href="{{ previous_url }}" {% if page == 1 %}aria-disabled="true" tabindex="-1"{% endif %}>←</a><span>{{ start_index }}〜{{ end_index }}件目を表示（{{ total_count }}件中）</span><a class="page-button" aria-label="次のページ" href="{{ next_url }}" {% if page == total_pages %}aria-disabled="true" tabindex="-1"{% endif %}>→</a></nav>
+    <button class="refresh-button" type="button" onclick="window.location.reload()">更新</button>
+  </div>
+  {% else %}
+  <div class="empty-results" role="status">該当する避難所が見つかりませんでした</div>
+  {% endif %}
+  <nav class="results-links" aria-label="ページ移動"><a href="{{ url_for('shelter_search') }}">検索画面に戻る</a><a href="{{ url_for('index') }}">トップページに戻る</a></nav>
+</section>
 {% endblock %}
