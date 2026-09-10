@@ -209,6 +209,23 @@ def enrich_shelter(shelter, reference_coordinates):
     item['longitude'] = longitude
     return item
 
+
+def get_map_shelters():
+    """住所を座標へ変換し、地図表示用の避難所データを返す"""
+    map_items = []
+    for shelter in shelters:
+        item = dict(shelter)
+        latitude = parse_coordinate(item.get('latitude'))
+        longitude = parse_coordinate(item.get('longitude'))
+        if (latitude is None or longitude is None) and item.get('address'):
+            latitude, longitude = geocode_address(item['address'])
+        if latitude is None or longitude is None:
+            continue
+        item['latitude'] = latitude
+        item['longitude'] = longitude
+        map_items.append(item)
+    return map_items
+
 def save_instructions():
     """指示ボードのデータをファイルに保存する"""
     try:
@@ -355,7 +372,8 @@ def index():
     resident_notices = [i for i in instructions if i.get('target') == '住民']
     return render_template(
         'index.html',
-        resident_notices=resident_notices
+        resident_notices=resident_notices,
+        map_shelters=get_map_shelters()
     )
 
 # ログインページ
@@ -414,16 +432,55 @@ def shelter_register():
         if not name:
             error = True
             message = '避難所名を入力してください'
+        elif registration_type == 'pre' and not any(shelter.get('name') == name for shelter in shelters):
+            address = request.form.get('address', '').strip()
+            now = datetime.now(JST).isoformat()
+            new_shelter = {
+                'id': max((shelter.get('id', 0) for shelter in shelters), default=0) + 1,
+                'name': name,
+                'address': address,
+                'registered_at': now,
+                'updated_at': now
+            }
+            shelters.append(new_shelter)
+            if not save_shelters():
+                shelters.pop()
+                error = True
+                message = '避難所情報を保存できませんでした。'
+            else:
+                success = True
+                message = '避難所を新規登録しました！'
         elif not any(shelter.get('name') == name for shelter in shelters):
             error = True
             message = 'エラー：登録されていない避難所名です。'
         else:
             shelter = next(shelter for shelter in shelters if shelter.get('name') == name)
             if registration_type == 'post':
+                operation = request.form.get('operation', 'update')
+                if operation == 'delete':
+                    shelter_index = shelters.index(shelter)
+                    removed_shelter = shelters.pop(shelter_index)
+                    if not save_shelters():
+                        shelters.insert(shelter_index, removed_shelter)
+                        error = True
+                        message = '避難所を削除できませんでした。'
+                    else:
+                        success = True
+                        message = '避難所を削除しました。'
+                    return render_template(
+                        'shelter_register.html',
+                        shelters=shelters,
+                        map_shelters=get_map_shelters(),
+                        name=name,
+                        error=error,
+                        success=success,
+                        message=message
+                    )
                 crowd_status = request.form.get('crowd_status', '').strip()
                 supply_status = request.form.get('supply_status', '').strip()
                 damage_status = request.form.get('damage_status', '').strip()
                 opening_status = request.form.get('opening_status', '').strip()
+                post_address = request.form.get('post_address', '').strip()
                 if (crowd_status not in STATUS_VALUES
                         or supply_status not in STATUS_VALUES
                         or damage_status not in STATUS_VALUES):
@@ -437,6 +494,8 @@ def shelter_register():
                     shelter['supply_status'] = supply_status
                     shelter['damage_status'] = damage_status
                     shelter['opening_status'] = opening_status
+                    if post_address:
+                        shelter['address'] = post_address
                     shelter['updated_at'] = datetime.now(JST).isoformat()
                     if not save_shelters():
                         error = True
@@ -458,6 +517,7 @@ def shelter_register():
     return render_template(
         'shelter_register.html',
         shelters=shelters,
+        map_shelters=get_map_shelters(),
         name=name,
         error=error,
         success=success,
@@ -467,7 +527,10 @@ def shelter_register():
 # 避難所検索ページ
 @app.route('/shelter_search')
 def shelter_search():
-    return render_template('shelter_search.html')
+    return render_template(
+        'shelter_search.html',
+        map_shelters=get_map_shelters()
+    )
 
 # 全施設一覧ページ
 @app.route('/all_shelters')

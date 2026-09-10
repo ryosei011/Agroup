@@ -30,6 +30,9 @@
   .supplies-input { width: 100%; min-height: 40px; padding: 9px; border: 1px solid #8e9aa6; border-radius: 3px; font: inherit; }
   .register-button { display: block; min-width: 78px; margin: 17px 0 0 auto; padding: 9px 18px; border: 0; border-radius: 3px; color: #fff; background: #2d5eaa; cursor: pointer; font: inherit; }
   .register-button:hover, .register-button:focus { background: #24529b; }
+  .register-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .register-button--delete { background: #b63838; }
+  .register-button--delete:hover, .register-button--delete:focus { background: #922d2d; }
   .register-placeholder { height: 284px; margin: 18px 0 20px; overflow: hidden; border-radius: 9px; background: #e8eef4; }
   .register-links { margin: 0; text-align: center; }
   .register-links a { color: #24529b; }
@@ -63,7 +66,7 @@
         <div class="register-field"><label for="address">登録住所（地図・距離計算用）</label><input id="address" name="address" type="text" placeholder="入力欄" value="{{ request.form.get('address', '') }}"></div>
         <div class="register-field"><label for="distance">距離</label><input id="distance" type="text" placeholder="入力欄"></div>
         <div class="register-field"><label for="contact">責任者 情報 電話番号</label><input id="contact" type="text" placeholder="入力欄"></div>
-        <button class="register-button" type="submit">更新</button>
+        <button class="register-button" type="submit">登録・更新</button>
       </form>
     </section>
 
@@ -72,11 +75,12 @@
       <form class="post-register-form" method="post">
         <input type="hidden" name="registration_type" value="post">
         <div class="register-field"><label for="shelter-name">登録済み避難所</label><select id="shelter-name" name="shelter_name" required><option value="">避難所を選択してください</option>{% for shelter in shelters %}<option value="{{ shelter.name }}" {% if request.form.get('shelter_name') == shelter.name %}selected{% endif %}>{{ shelter.name }}</option>{% endfor %}</select></div>
+        <div class="register-field"><label for="post-address">住所</label><input id="post-address" name="post_address" type="text" placeholder="避難所の住所を入力" value="{{ request.form.get('post_address', '') }}"></div>
         <div class="register-field"><label for="opening-status">開催状況ステータス</label><select id="opening-status" name="opening_status" required><option value="">選択してください</option><option value="未開設">未開設</option><option value="開設準備中">開設準備中</option><option value="開設中">開設中</option></select></div>
         <fieldset class="register-field status-fieldset"><legend>混雑状況</legend><div class="choice-list"><label><input type="radio" name="crowd_status" value="◎" required> ◎</label><label><input type="radio" name="crowd_status" value="○"> ○</label><label><input type="radio" name="crowd_status" value="△"> △</label><label><input type="radio" name="crowd_status" value="×"> ×</label></div></fieldset>
         <fieldset class="register-field status-fieldset"><legend>物資状況</legend><div class="choice-list"><label><input type="radio" name="supply_status" value="◎" required> ◎</label><label><input type="radio" name="supply_status" value="○"> ○</label><label><input type="radio" name="supply_status" value="△"> △</label><label><input type="radio" name="supply_status" value="×"> ×</label></div></fieldset>
         <fieldset class="register-field status-fieldset"><legend>被害状況</legend><div class="choice-list"><label><input type="radio" name="damage_status" value="◎" required> ◎</label><label><input type="radio" name="damage_status" value="○"> ○</label><label><input type="radio" name="damage_status" value="△"> △</label><label><input type="radio" name="damage_status" value="×"> ×</label></div></fieldset>
-        <button class="register-button" type="submit">更新</button>
+        <div class="register-actions"><button class="register-button" type="submit">更新</button><button class="register-button register-button--delete" type="submit" name="operation" value="delete" formnovalidate onclick="return confirm('選択した避難所を削除します。よろしいですか？');">削除</button></div>
       </form>
     </section>
   </div>
@@ -94,7 +98,14 @@
   }).addTo(registerMap);
 
   const shelterData = {{ shelters | tojson }};
+  const mapShelters = {{ map_shelters | tojson }};
+  mapShelters.forEach(function (shelter) {
+    L.marker([shelter.latitude, shelter.longitude])
+      .addTo(registerMap)
+      .bindPopup(`<strong>${shelter.name}</strong><br>${shelter.address || ''}`);
+  });
   const postShelterSelect = document.getElementById('shelter-name');
+  const postAddressInput = document.getElementById('post-address');
   const statusFields = {
     crowd_status: document.querySelectorAll('input[name="crowd_status"]'),
     supply_status: document.querySelectorAll('input[name="supply_status"]'),
@@ -105,6 +116,7 @@
     const selectedShelter = shelterData.find(function (shelter) {
       return shelter.name === postShelterSelect.value;
     });
+    postAddressInput.value = selectedShelter && selectedShelter.address ? selectedShelter.address : '';
     Object.keys(statusFields).forEach(function (field) {
       const value = selectedShelter && selectedShelter[field] ? selectedShelter[field] : '';
       if (field === 'opening_status') {

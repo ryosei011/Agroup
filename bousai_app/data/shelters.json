@@ -5,8 +5,8 @@
     "crowd_status": "○",
     "supply_status": "△",
     "damage_status": "×",
-    "opening_status": "開設中",
-    "updated_at": "2026-09-10T12:50:21.968344+09:00"
+    "opening_status": "開設準備中",
+    "updated_at": "2026-09-10T13:19:39.720199+09:00"
   },
   {
     "id": 2,
@@ -28,6 +28,14 @@
     "supply_status": "○",
     "damage_status": "△",
     "opening_status": "開設中",
-    "updated_at": "2026-09-10T12:42:13.551887+09:00"
+    "updated_at": "2026-09-10T13:46:08.234315+09:00",
+    "address": "青森県青森市金沢１丁目６−１"
+  },
+  {
+    "id": 7,
+    "name": "浜田小学校",
+    "address": "",
+    "registered_at": "2026-09-10T14:00:07.952582+09:00",
+    "updated_at": "2026-09-10T14:00:07.952582+09:00"
   }
 ]

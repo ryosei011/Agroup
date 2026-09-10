@@ -45,6 +45,13 @@ document.addEventListener('DOMContentLoaded', function() {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
+    const mapShelters = {{ map_shelters | tojson }};
+    mapShelters.forEach(function (shelter) {
+        L.marker([shelter.latitude, shelter.longitude])
+            .addTo(map)
+            .bindPopup(`<strong>${shelter.name}</strong><br>${shelter.address || ''}`);
+    });
+
     // 気象警報・注意報の自動更新機能
     function updateWeatherWarnings() {
         fetch('/api/weather_warnings')

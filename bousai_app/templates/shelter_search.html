@@ -29,6 +29,13 @@ document.addEventListener('DOMContentLoaded', function() {
 	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		attribution: '© OpenStreetMap contributors'
 	}).addTo(map);
+
+	const mapShelters = {{ map_shelters | tojson }};
+	mapShelters.forEach(function (shelter) {
+		L.marker([shelter.latitude, shelter.longitude])
+			.addTo(map)
+			.bindPopup(`<strong>${shelter.name}</strong><br>${shelter.address || ''}`);
+	});
 });
 </script>
 {% endblock %}
