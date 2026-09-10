@@ -189,9 +189,11 @@ def distance_status(distance_km):
         return '×'
     if distance_km <= 1:
         return '◎'
-    if distance_km <= 5:
+    if distance_km <= 2:
         return '○'
-    return '△'
+    if distance_km <= 5:
+        return '△'
+    return '×'
 
 
 def enrich_shelter(shelter, reference_coordinates):
@@ -200,7 +202,7 @@ def enrich_shelter(shelter, reference_coordinates):
     longitude = parse_coordinate(item.get('longitude'))
     address = item.get('address', '').strip()
     if (latitude is None or longitude is None) and address:
-        latitude, longitude = geocode_address(address)
+        latitude, longitude = geocode_address(address, item.get('name', ''))
         if latitude is not None and longitude is not None:
             item['latitude'] = latitude
             item['longitude'] = longitude
@@ -442,12 +444,14 @@ def shelter_register():
         elif registration_type == 'pre' and not any(shelter.get('name') == name for shelter in shelters):
             address = request.form.get('address', '').strip()
             contact = request.form.get('contact', '').strip()
+            barrier_free = request.form.get('barrier_free') == 'on'
             now = datetime.now(JST).isoformat()
             new_shelter = {
                 'id': max((shelter.get('id', 0) for shelter in shelters), default=0) + 1,
                 'name': name,
                 'address': address,
                 'contact': contact,
+                'barrier_free': barrier_free,
                 'registered_at': now,
                 'updated_at': now
             }
@@ -515,8 +519,11 @@ def shelter_register():
             else:
                 address = request.form.get('address', '').strip()
                 contact = request.form.get('contact', '').strip()
-                shelter['address'] = address
+                barrier_free = request.form.get('barrier_free') == 'on'
+                if address:
+                    shelter['address'] = address
                 shelter['contact'] = contact
+                shelter['barrier_free'] = barrier_free
                 shelter['updated_at'] = datetime.now(JST).isoformat()
                 if not save_shelters():
                     error = True
@@ -631,6 +638,8 @@ def board_delete():
 def search_results():
     criteria = request.args.get('criteria', '').strip()
     criteria = CRITERIA_ALIASES.get(criteria, criteria)
+    latitude = parse_coordinate(request.args.get('latitude'))
+    longitude = parse_coordinate(request.args.get('longitude'))
     district = request.args.get('district')
     crowd_status = request.args.get('crowd_status', '').strip()
     supply_status = request.args.get('supply_status', '').strip()
@@ -646,13 +655,25 @@ def search_results():
             key=lambda shelter: STATUS_RANK.get(shelter.get(sort_field), len(STATUS_VALUES))
         )
 
+    reference_coordinates = get_reference_coordinates()
+    gps_location = latitude is not None and longitude is not None
+    if request.args.get('latitude') or request.args.get('longitude'):
+        if gps_location:
+            reference_coordinates = (latitude, longitude, 'GPS')
+        else:
+            reference_coordinates = (None, None, 'GPS')
+    if criteria == '距離が近い順':
+        results = sorted(
+            (enrich_shelter(shelter, reference_coordinates) for shelter in results),
+            key=lambda shelter: shelter['distance_km'] if shelter['distance_km'] is not None else math.inf
+        )
+
     page = request.args.get('page', 1, type=int)
     total_count = len(results)
     total_pages = max(1, math.ceil(total_count / RESULTS_PER_PAGE))
     page = min(max(page, 1), total_pages)
     start_index = (page - 1) * RESULTS_PER_PAGE
     end_index = min(start_index + RESULTS_PER_PAGE, total_count)
-    reference_coordinates = get_reference_coordinates()
     enriched_results = [
         enrich_shelter(shelter, reference_coordinates)
         for shelter in results[start_index:end_index]
@@ -674,7 +695,8 @@ def search_results():
         query_params=query_params,
         previous_url=previous_url,
         next_url=next_url,
-        reference_coordinates=reference_coordinates
+        reference_coordinates=reference_coordinates,
+        gps_location=gps_location
     )
 
 # JSON API：/shelters?district=地区名

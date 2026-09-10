@@ -1,3 +1,4 @@
+  .distance-error { margin: 0 0 16px; color: #b23b2f; }
 {% extends "base.html" %}
 
 {% block title %}検索結果 | 防災アプリ{% endblock %}
@@ -19,11 +20,12 @@
   .results-table th:first-child, .results-table td:first-child { width: 28%; text-align: left; }
   .shelter-name { display: block; color: #253b57; font-weight: 800; }
   .contact-info { display: block; margin-top: 3px; color: #66788e; font-size: 11px; font-weight: 500; }
-  .opening-status { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; }
+  .opening-status { display: inline-block; margin-top: 3px; font-size: 11px; font-weight: 700; }
   .opening-status--open { color: #159447; }
   .opening-status--preparing { color: #d98219; }
   .opening-status--closed { color: #718096; }
-  .map-link { display: inline-block; margin-top: 5px; color: #2466b1; font-size: 12px; font-weight: 700; }
+  .barrier-free-status { display: inline-block; margin: 3px 0 0 8px; color: #78a82f; font-size: 11px; font-weight: 700; }
+  .map-link { display: block; width: fit-content; margin-top: 5px; color: #2466b1; font-size: 12px; font-weight: 700; }
   .map-unavailable { display: block; margin-top: 5px; color: #77879a; font-size: 12px; }
   .status-symbol { display: block; font-size: 27px; line-height: 1.1; font-weight: 800; }
   .status-good { color: #159447; } .status-normal { color: #168b87; } .status-caution { color: #d98219; } .status-bad { color: #d33b3b; } .status-unknown { color: #718096; }
@@ -50,12 +52,16 @@
         <option value="被害状況" {% if criteria == '被害状況' %}selected{% endif %}>被害状況が良い順</option>
         <option value="混雑状況" {% if criteria == '混雑状況' %}selected{% endif %}>混雑状況が良い順</option>
         <option value="物資状況" {% if criteria == '物資状況' %}selected{% endif %}>物資状況が良い順</option>
+        <option value="距離が近い順" {% if criteria == '距離が近い順' %}selected{% endif %}>距離が近い順</option>
       </select>
       {% if request.args.get('district') %}<input type="hidden" name="district" value="{{ request.args.get('district') }}">{% endif %}
       {% if request.args.get('crowd_status') %}<input type="hidden" name="crowd_status" value="{{ request.args.get('crowd_status') }}">{% endif %}
       {% if request.args.get('supply_status') %}<input type="hidden" name="supply_status" value="{{ request.args.get('supply_status') }}">{% endif %}
+      {% if request.args.get('latitude') %}<input type="hidden" name="latitude" value="{{ request.args.get('latitude') }}">{% endif %}
+      {% if request.args.get('longitude') %}<input type="hidden" name="longitude" value="{{ request.args.get('longitude') }}">{% endif %}
     </form>
   </div>
+    {% if request.args.get('latitude') or request.args.get('longitude') %}<p class="distance-note">GPSで取得した現在地からの距離を表示しています。</p>{% endif %}
   {% if results %}
   <div class="results-table-wrap">
     <table class="results-table">
@@ -70,7 +76,7 @@
         {% set opening = shelter.get('opening_status') %}
         {% set contact = shelter.get('contact') %}
         <tr>
-          <th scope="row"><span class="shelter-name">{{ shelter.get('name', '名称未設定') }}</span>{% if opening %}<span class="opening-status {% if opening == '開設中' %}opening-status--open{% elif opening == '開設準備中' %}opening-status--preparing{% else %}opening-status--closed{% endif %}">{{ opening }}</span>{% endif %}{% if contact %}<span class="contact-info">{{ contact }}</span>{% endif %}{% if shelter.get('address') %}<a class="map-link" href="https://www.google.com/maps/search/?api=1&amp;query={{ shelter.get('address')|urlencode }}" target="_blank" rel="noopener noreferrer">MAP</a>{% else %}<span class="map-unavailable">MAP（住所未登録）</span>{% endif %}</th>
+          <th scope="row"><span class="shelter-name">{{ shelter.get('name', '名称未設定') }}</span>{% if opening %}<span class="opening-status {% if opening == '開設中' %}opening-status--open{% elif opening == '開設準備中' %}opening-status--preparing{% else %}opening-status--closed{% endif %}">{{ opening }}</span>{% endif %}{% if shelter.get('barrier_free') %}<span class="barrier-free-status">バリアフリー対応可</span>{% endif %}{% if contact %}<span class="contact-info">{{ contact }}</span>{% endif %}{% if shelter.get('address') %}<a class="map-link" href="https://www.google.com/maps/search/?api=1&amp;query={{ shelter.get('address')|urlencode }}" target="_blank" rel="noopener noreferrer">MAP</a>{% else %}<span class="map-unavailable">MAP（住所未登録）</span>{% endif %}</th>
           <td><span class="status-symbol {% if crowd == '◎' %}status-good{% elif crowd == '○' %}status-normal{% elif crowd == '△' %}status-caution{% elif crowd == '×' %}status-bad{% else %}status-unknown{% endif %}" aria-label="混雑状況 {{ crowd or '未設定' }}">{{ crowd or '—' }}</span>{% if updated %}<span class="updated-time">{{ updated[11:16] }}更新</span>{% endif %}</td>
           <td><span class="status-symbol {% if supply == '◎' %}status-good{% elif supply == '○' %}status-normal{% elif supply == '△' %}status-caution{% elif supply == '×' %}status-bad{% else %}status-unknown{% endif %}" aria-label="物資状況 {{ supply or '未設定' }}">{{ supply or '—' }}</span>{% if updated %}<span class="updated-time">{{ updated[11:16] }}更新</span>{% endif %}</td>
           <td><span class="status-symbol {% if damage == '◎' %}status-good{% elif damage == '○' %}status-normal{% elif damage == '△' %}status-caution{% elif damage == '×' %}status-bad{% else %}status-unknown{% endif %}" aria-label="被害状況 {{ damage or '未設定' }}">{{ damage or '—' }}</span>{% if updated %}<span class="updated-time">{{ updated[11:16] }}更新</span>{% endif %}</td>

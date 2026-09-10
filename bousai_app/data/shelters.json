@@ -1,64 +1,15 @@
 [
   {
-    "id": 1,
-    "name": "御所見小学校",
-    "crowd_status": "△",
-    "supply_status": "○",
-    "damage_status": "△",
-    "opening_status": "未開設",
-    "updated_at": "2026-09-10T14:31:10.066592+09:00"
-  },
-  {
-    "id": 2,
-    "name": "片瀬小学校",
-    "crowd_status": "×",
-    "supply_status": "×",
-    "damage_status": "◎",
-    "opening_status": "開設中",
-    "updated_at": "2026-09-10T12:55:09.176404+09:00"
-  },
-  {
-    "id": 5,
-    "name": "鵠洋小学校"
-  },
-  {
-    "id": 6,
-    "name": "南",
-    "crowd_status": "◎",
-    "supply_status": "○",
-    "damage_status": "△",
-    "opening_status": "開設中",
-    "updated_at": "2026-09-10T15:29:36.784036+09:00",
-    "address": "",
-    "contact": "09447582985"
-  },
-  {
     "id": 7,
     "name": "浜田小学校",
     "address": "青森県青森市浜田豊田３６−２",
     "registered_at": "2026-09-10T14:23:14.214934+09:00",
-    "updated_at": "2026-09-10T15:48:29.280859+09:00",
+    "updated_at": "2026-09-10T16:29:00.017742+09:00",
     "crowd_status": "○",
     "supply_status": "◎",
     "damage_status": "△",
-    "opening_status": "開設準備中"
-  },
-  {
-    "id": 8,
-    "name": "北小学校",
-    "address": "",
-    "registered_at": "2026-09-10T15:01:51.560907+09:00",
-    "updated_at": "2026-09-10T15:14:34.636711+09:00",
-    "crowd_status": "◎",
-    "supply_status": "○",
-    "damage_status": "△",
-    "opening_status": "開設中"
-  },
-  {
-    "id": 9,
-    "name": "西小学校",
-    "address": "",
-    "registered_at": "2026-09-10T15:03:30.651880+09:00",
-    "updated_at": "2026-09-10T15:03:30.651880+09:00"
+    "opening_status": "開設準備中",
+    "contact": "",
+    "barrier_free": true
   }
 ]
