@@ -157,6 +157,38 @@ document.addEventListener('DOMContentLoaded', function() {
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
+  const mapShelters = {{ map_shelters | default([]) | tojson }};
+  function statusClass(status) {
+    return { '◎': 'good', '○': 'normal', '△': 'caution', '×': 'bad' }[status] || 'unknown';
+  }
+  function openingClass(status) {
+    return status === '開設中' ? 'open' : status === '開設準備中' ? 'preparing' : 'closed';
+  }
+  function shelterIcon(shelter) {
+    return L.divIcon({
+      className: 'shelter-marker',
+      html: `<span class="shelter-pin shelter-pin--${openingClass(shelter.opening_status)}"></span>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 20],
+      popupAnchor: [0, -20]
+    });
+  }
+  function shelterPopup(shelter) {
+    const value = function (field) { return shelter[field] || '未登録'; };
+    return `<strong>${shelter.name}</strong><br>`
+      + `住所：${value('address')}<br>`
+      + `電話番号：${value('contact')}<br>`
+      + `開催状況：${value('opening_status')}<br>`
+      + `混雑状況：<span class="popup-status--${statusClass(shelter.crowd_status)}">${value('crowd_status')}</span><br>`
+      + `物資状況：<span class="popup-status--${statusClass(shelter.supply_status)}">${value('supply_status')}</span><br>`
+      + `被害状況：<span class="popup-status--${statusClass(shelter.damage_status)}">${value('damage_status')}</span>`;
+  }
+  mapShelters.forEach(function (shelter) {
+    L.marker([shelter.latitude, shelter.longitude], { icon: shelterIcon(shelter) })
+      .addTo(map)
+      .bindPopup(shelterPopup(shelter));
+  });
+
   const mapElement = document.getElementById('boardMap');
   const fullscreenButton = document.getElementById('mapZoomIn');
   fullscreenButton.addEventListener('click', function() {

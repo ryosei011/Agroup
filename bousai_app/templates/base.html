@@ -37,6 +37,18 @@
       box-shadow: 0 1px 5px rgba(25, 60, 110, .2);
     }
 
+    .shelter-marker { border: 0; background: transparent; }
+    .shelter-pin { display: block; width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50% 50% 50% 0; box-shadow: 0 1px 4px rgba(0, 0, 0, .35); transform: rotate(-45deg); }
+    .shelter-pin--open { background: #159447; }
+    .shelter-pin--preparing { background: #d98219; }
+    .shelter-pin--closed { background: #718096; }
+    .popup-status--good, .popup-status--normal, .popup-status--caution, .popup-status--bad, .popup-status--unknown { font-size: 1.35em; font-weight: 800; }
+    .popup-status--good { color: #159447; }
+    .popup-status--normal { color: #168b87; font-size: 1.6em; }
+    .popup-status--caution { color: #d98219; }
+    .popup-status--bad { color: #d33b3b; }
+    .popup-status--unknown { color: #718096; }
+
     .header-inner {
       width: min(1080px, calc(100% - 32px));
       height: 100%;

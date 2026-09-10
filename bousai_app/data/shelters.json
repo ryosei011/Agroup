@@ -37,7 +37,11 @@
     "name": "浜田小学校",
     "address": "青森県青森市浜田豊田３６−２",
     "registered_at": "2026-09-10T14:23:14.214934+09:00",
-    "updated_at": "2026-09-10T14:23:14.214934+09:00"
+    "updated_at": "2026-09-10T15:48:29.280859+09:00",
+    "crowd_status": "○",
+    "supply_status": "◎",
+    "damage_status": "△",
+    "opening_status": "開設準備中"
   },
   {
     "id": 8,

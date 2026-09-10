@@ -128,29 +128,36 @@ def parse_coordinate(value):
         return None
 
 
-def geocode_address(address):
+def geocode_address(address, shelter_name=''):
     """住所をジオコードする。未設定・失敗時は座標を推測しない。"""
     address = (address or '').strip()
     if not address:
         return None, None
-    if address in GEOCODE_CACHE:
-        return GEOCODE_CACHE[address]
 
-    try:
-        query = quote(address)
-        url = f'https://nominatim.openstreetmap.org/search?q={query}&format=json&limit=1'
-        request = urllib.request.Request(url, headers={'User-Agent': 'bousai-app/1.0'})
-        with urllib.request.urlopen(request, timeout=5) as response:
-            matches = json.loads(response.read())
-        if matches:
-            coordinates = (
-                parse_coordinate(matches[0].get('lat')),
-                parse_coordinate(matches[0].get('lon'))
-            )
-            GEOCODE_CACHE[address] = coordinates
+    queries = [address]
+    if shelter_name:
+        queries.append(f'{shelter_name} 青森市')
+
+    for query_text in queries:
+        cache_key = f'{query_text}'
+        if cache_key in GEOCODE_CACHE:
+            coordinates = GEOCODE_CACHE[cache_key]
+        else:
+            try:
+                query = quote(query_text)
+                url = f'https://nominatim.openstreetmap.org/search?q={query}&format=json&limit=1'
+                request = urllib.request.Request(url, headers={'User-Agent': 'bousai-app/1.0'})
+                with urllib.request.urlopen(request, timeout=5) as response:
+                    matches = json.loads(response.read())
+                coordinates = (
+                    parse_coordinate(matches[0].get('lat')),
+                    parse_coordinate(matches[0].get('lon'))
+                ) if matches else (None, None)
+                GEOCODE_CACHE[cache_key] = coordinates
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                coordinates = (None, None)
+        if coordinates[0] is not None and coordinates[1] is not None:
             return coordinates
-    except (OSError, ValueError, TypeError, json.JSONDecodeError):
-        pass
     return None, None
 
 
@@ -162,7 +169,7 @@ def get_reference_coordinates():
 
     address = os.environ.get('BOUSAI_REFERENCE_ADDRESS', '').strip()
     if address:
-        latitude, longitude = geocode_address(address)
+        latitude, longitude = geocode_address(address, item.get('name', ''))
         return latitude, longitude, address
     return None, None, ''
 
@@ -218,7 +225,7 @@ def get_map_shelters():
         latitude = parse_coordinate(item.get('latitude'))
         longitude = parse_coordinate(item.get('longitude'))
         if (latitude is None or longitude is None) and item.get('address'):
-            latitude, longitude = geocode_address(item['address'])
+            latitude, longitude = geocode_address(item['address'], item.get('name', ''))
         if latitude is None or longitude is None:
             continue
         item['latitude'] = latitude
@@ -561,7 +568,8 @@ def board():
                 'board.html',
                 instructions=resident_instructions,
                 error='対象地域・避難所、災害情報・指示、緊急レベルを入力してください。',
-                form_data=request.form
+                form_data=request.form,
+                map_shelters=get_map_shelters()
             )
 
         now = get_japan_time()
@@ -586,14 +594,20 @@ def board():
                 'board.html',
                 instructions=resident_instructions,
                 error='発信内容を保存できませんでした。',
-                form_data=request.form
+                form_data=request.form,
+                map_shelters=get_map_shelters()
             )
 
         return redirect(url_for('board'))
 
     resident_instructions = [i for i in instructions if i.get('target') == '住民']
     resident_instructions.sort(key=lambda item: item.get('id', 0), reverse=True)
-    return render_template('board.html', instructions=resident_instructions, form_data={})
+    return render_template(
+        'board.html',
+        instructions=resident_instructions,
+        form_data={},
+        map_shelters=get_map_shelters()
+    )
 
 
 @app.route('/board/delete', methods=['POST'])
