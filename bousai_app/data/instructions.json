@@ -1,14 +1,5 @@
 [
   {
-    "id": 4,
-    "target": "住民",
-    "content": "B避難所へ避難してください",
-    "shelter": "片瀬小学校",
-    "status": "解除",
-    "created_at": "2026年07月14日 18:38",
-    "updated_at": "2026年07月14日 18:38"
-  },
-  {
     "id": 3,
     "target": "防災課",
     "content": "A地区の現地確認",
@@ -18,15 +9,6 @@
     "updated_at": "2026年07月14日 18:38"
   },
   {
-    "id": 2,
-    "target": "住民",
-    "content": "土砂災害の危険があるため避難してください",
-    "shelter": "御所見小学校",
-    "status": "解除",
-    "created_at": "2026年07月14日 18:22",
-    "updated_at": "2026年07月14日 18:22"
-  },
-  {
     "id": 1,
     "target": "道路管理課",
     "content": "○○橋の通行止め確認",
@@ -34,5 +16,41 @@
     "status": "完了",
     "created_at": "2026年07月14日 18:22",
     "updated_at": "2026年07月14日 18:22"
+  },
+  {
+    "id": 4,
+    "target": "住民",
+    "content": "あ",
+    "shelter": "北小学校",
+    "status": "レベル1",
+    "created_at": "2026年09月10日 15:10",
+    "updated_at": "2026年09月10日 15:10"
+  },
+  {
+    "id": 5,
+    "target": "住民",
+    "content": "i",
+    "shelter": "北小学校",
+    "status": "レベル1",
+    "created_at": "2026年09月10日 15:10",
+    "updated_at": "2026年09月10日 15:10"
+  },
+  {
+    "id": 6,
+    "target": "住民",
+    "content": "1",
+    "shelter": "北小学校",
+    "status": "レベル2",
+    "created_at": "2026年09月10日 15:10",
+    "updated_at": "2026年09月10日 15:10"
+  },
+  {
+    "id": 7,
+    "target": "住民",
+    "content": "2",
+    "shelter": "北小学校",
+    "status": "レベル1",
+    "created_at": "2026年09月10日 15:10",
+    "updated_at": "2026年09月10日 15:10"
   }
 ]

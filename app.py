@@ -434,11 +434,13 @@ def shelter_register():
             message = '避難所名を入力してください'
         elif registration_type == 'pre' and not any(shelter.get('name') == name for shelter in shelters):
             address = request.form.get('address', '').strip()
+            contact = request.form.get('contact', '').strip()
             now = datetime.now(JST).isoformat()
             new_shelter = {
                 'id': max((shelter.get('id', 0) for shelter in shelters), default=0) + 1,
                 'name': name,
                 'address': address,
+                'contact': contact,
                 'registered_at': now,
                 'updated_at': now
             }
@@ -505,7 +507,9 @@ def shelter_register():
                         message = '事後登録を更新しました！'
             else:
                 address = request.form.get('address', '').strip()
+                contact = request.form.get('contact', '').strip()
                 shelter['address'] = address
+                shelter['contact'] = contact
                 shelter['updated_at'] = datetime.now(JST).isoformat()
                 if not save_shelters():
                     error = True

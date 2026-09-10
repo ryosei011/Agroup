@@ -48,6 +48,8 @@
   }
   .board-map { min-height: 320px; }
   #boardMap { height: 270px; margin-bottom: 12px; }
+  #boardMap:fullscreen { width: 100vw; height: 100vh; margin: 0; border-radius: 0; background: #fff; }
+  #boardMap:-webkit-full-screen { width: 100vw; height: 100vh; margin: 0; border-radius: 0; background: #fff; }
   .map-actions { display: flex; gap: 8px; }
   .history-section { margin-top: 24px; }
   .history-table { width: 100%; border-collapse: collapse; background: white; }
@@ -57,6 +59,8 @@
   .history-row.is-hidden { display: none; }
   .history-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
   .history-empty { padding: 16px; border: 1px solid #b9c2cc; background: white; }
+  .board-links { margin: 24px 0 0; padding-top: 18px; border-top: 1px solid #d9e1e8; text-align: center; }
+  .board-links a { color: #24529b; }
   @media (max-width: 700px) {
     .board-layout { grid-template-columns: 1fr; }
     .history-table { font-size: 12px; }
@@ -101,8 +105,7 @@
       <h3 id="map-heading">地図プレビュー</h3>
       <div id="boardMap"></div>
       <div class="map-actions">
-        <button class="board-button" id="mapZoomIn" type="button">拡大</button>
-        <button class="board-button" id="mapReset" type="button">リセット</button>
+        <button class="board-button" id="mapZoomIn" type="button" aria-label="地図を全画面表示">全画面</button>
       </div>
     </section>
   </div>
@@ -142,6 +145,7 @@
     <p class="history-empty">登録されている指示はありません。</p>
     {% endif %}
   </section>
+  <p class="board-links"><a href="{{ url_for('index') }}">トップページに戻る</a></p>
 </section>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -152,15 +156,31 @@ document.addEventListener('DOMContentLoaded', function() {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
-  const initialView = [40.8244, 140.7400];
 
-  document.getElementById('mapZoomIn').addEventListener('click', function() {
-    map.zoomIn();
+  const mapElement = document.getElementById('boardMap');
+  const fullscreenButton = document.getElementById('mapZoomIn');
+  fullscreenButton.addEventListener('click', function() {
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      return;
+    }
+    const requestFullscreen = mapElement.requestFullscreen || mapElement.webkitRequestFullscreen;
+    if (requestFullscreen) {
+      requestFullscreen.call(mapElement);
+    }
   });
-  document.getElementById('mapReset').addEventListener('click', function() {
-    map.setView(initialView, 12);
+  document.addEventListener('fullscreenchange', function() {
+    const isFullscreen = document.fullscreenElement === mapElement;
+    fullscreenButton.textContent = isFullscreen ? '全画面解除' : '全画面';
+    fullscreenButton.setAttribute('aria-label', isFullscreen ? '地図の全画面表示を解除' : '地図を全画面表示');
+    setTimeout(function() { map.invalidateSize(); }, 100);
   });
-
+  document.addEventListener('webkitfullscreenchange', function() {
+    const isFullscreen = document.webkitFullscreenElement === mapElement;
+    fullscreenButton.textContent = isFullscreen ? '全画面解除' : '全画面';
+    fullscreenButton.setAttribute('aria-label', isFullscreen ? '地図の全画面表示を解除' : '地図を全画面表示');
+    setTimeout(function() { map.invalidateSize(); }, 100);
+  });
   const historyToggle = document.getElementById('historyToggle');
   if (historyToggle) {
     historyToggle.addEventListener('click', function() {

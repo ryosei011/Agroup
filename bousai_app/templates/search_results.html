@@ -18,6 +18,7 @@
   .results-table th { color: #405a78; background: #f1f5f9; font-weight: 700; }
   .results-table th:first-child, .results-table td:first-child { width: 28%; text-align: left; }
   .shelter-name { display: block; color: #253b57; font-weight: 800; }
+  .contact-info { display: block; margin-top: 3px; color: #66788e; font-size: 11px; font-weight: 500; }
   .opening-status { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; }
   .opening-status--open { color: #159447; }
   .opening-status--preparing { color: #d98219; }
@@ -67,8 +68,9 @@
         {% set supply = shelter.get('supply_status') %}
         {% set damage = shelter.get('damage_status') %}
         {% set opening = shelter.get('opening_status') %}
+        {% set contact = shelter.get('contact') %}
         <tr>
-          <th scope="row"><span class="shelter-name">{{ shelter.get('name', '名称未設定') }}</span>{% if opening %}<span class="opening-status {% if opening == '開設中' %}opening-status--open{% elif opening == '開設準備中' %}opening-status--preparing{% else %}opening-status--closed{% endif %}">{{ opening }}</span>{% endif %}{% if shelter.get('address') %}<a class="map-link" href="https://www.google.com/maps/search/?api=1&amp;query={{ shelter.get('address')|urlencode }}" target="_blank" rel="noopener noreferrer">MAP</a>{% else %}<span class="map-unavailable">MAP（住所未登録）</span>{% endif %}</th>
+          <th scope="row"><span class="shelter-name">{{ shelter.get('name', '名称未設定') }}</span>{% if opening %}<span class="opening-status {% if opening == '開設中' %}opening-status--open{% elif opening == '開設準備中' %}opening-status--preparing{% else %}opening-status--closed{% endif %}">{{ opening }}</span>{% endif %}{% if contact %}<span class="contact-info">{{ contact }}</span>{% endif %}{% if shelter.get('address') %}<a class="map-link" href="https://www.google.com/maps/search/?api=1&amp;query={{ shelter.get('address')|urlencode }}" target="_blank" rel="noopener noreferrer">MAP</a>{% else %}<span class="map-unavailable">MAP（住所未登録）</span>{% endif %}</th>
           <td><span class="status-symbol {% if crowd == '◎' %}status-good{% elif crowd == '○' %}status-normal{% elif crowd == '△' %}status-caution{% elif crowd == '×' %}status-bad{% else %}status-unknown{% endif %}" aria-label="混雑状況 {{ crowd or '未設定' }}">{{ crowd or '—' }}</span>{% if updated %}<span class="updated-time">{{ updated[11:16] }}更新</span>{% endif %}</td>
           <td><span class="status-symbol {% if supply == '◎' %}status-good{% elif supply == '○' %}status-normal{% elif supply == '△' %}status-caution{% elif supply == '×' %}status-bad{% else %}status-unknown{% endif %}" aria-label="物資状況 {{ supply or '未設定' }}">{{ supply or '—' }}</span>{% if updated %}<span class="updated-time">{{ updated[11:16] }}更新</span>{% endif %}</td>
           <td><span class="status-symbol {% if damage == '◎' %}status-good{% elif damage == '○' %}status-normal{% elif damage == '△' %}status-caution{% elif damage == '×' %}status-bad{% else %}status-unknown{% endif %}" aria-label="被害状況 {{ damage or '未設定' }}">{{ damage or '—' }}</span>{% if updated %}<span class="updated-time">{{ updated[11:16] }}更新</span>{% endif %}</td>
