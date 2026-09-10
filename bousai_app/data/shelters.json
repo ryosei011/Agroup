@@ -11,5 +11,31 @@
     "opening_status": "開設準備中",
     "contact": "",
     "barrier_free": true
+  },
+  {
+    "id": 9,
+    "name": "戸山市民センター",
+    "address": "青森市蛍沢四丁目1-4",
+    "contact": "",
+    "barrier_free": false,
+    "registered_at": "2026-09-10T17:06:03.312874+09:00",
+    "updated_at": "2026-09-10T17:06:12.975308+09:00",
+    "crowd_status": "○",
+    "supply_status": "×",
+    "damage_status": "×",
+    "opening_status": "未開設"
+  },
+  {
+    "id": 10,
+    "name": "西中学校",
+    "address": "青森市大字浪館字志田36",
+    "contact": "",
+    "barrier_free": false,
+    "registered_at": "2026-09-10T17:13:33.624777+09:00",
+    "updated_at": "2026-09-10T17:13:43.322504+09:00",
+    "crowd_status": "◎",
+    "supply_status": "◎",
+    "damage_status": "○",
+    "opening_status": "開設中"
   }
 ]
