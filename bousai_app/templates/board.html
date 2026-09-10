@@ -3,23 +3,179 @@
 {% block title %}指示・発信ボード - 防災アプリ{% endblock %}
 
 {% block content %}
-<h2>発信ボード</h2>
-<p>住民向けの発信を登録・確認できます。</p>
+<style>
+  .board-page h2 { color: #244e91; }
+  .board-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, .8fr);
+    gap: 18px;
+  }
+  .board-panel {
+    padding: 20px;
+    border: 1px solid #b9c2cc;
+    background: #fff;
+  }
+  .board-form label { display: block; margin: 0 0 6px; font-weight: 700; }
+  .board-form input,
+  .board-form textarea,
+  .board-form select {
+    display: block;
+    width: 100%;
+    margin: 0 0 14px;
+    padding: 9px;
+    border: 1px solid #8e9aa6;
+    border-radius: 3px;
+    font: inherit;
+  }
+  .board-form textarea { min-height: 110px; resize: vertical; }
+  .board-actions { display: flex; gap: 10px; }
+  .board-button {
+    padding: 9px 18px;
+    border: 0;
+    border-radius: 3px;
+    color: white;
+    background: #2d5eaa;
+    cursor: pointer;
+    font: inherit;
+  }
+  .board-button.secondary { color: #244e91; background: #dceaf7; }
+  .board-error {
+    margin: 0 0 16px;
+    padding: 10px;
+    border: 1px solid #d33b3b;
+    color: #a62222;
+    background: #fff5f5;
+  }
+  .board-map { min-height: 320px; }
+  #boardMap { height: 270px; margin-bottom: 12px; }
+  .map-actions { display: flex; gap: 8px; }
+  .history-section { margin-top: 24px; }
+  .history-table { width: 100%; border-collapse: collapse; background: white; }
+  .history-table th,
+  .history-table td { padding: 10px; border: 1px solid #7f8992; text-align: left; vertical-align: top; }
+  .history-table th { color: #244e91; background: #eef4f9; }
+  .history-row.is-hidden { display: none; }
+  .history-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
+  .history-empty { padding: 16px; border: 1px solid #b9c2cc; background: white; }
+  @media (max-width: 700px) {
+    .board-layout { grid-template-columns: 1fr; }
+    .history-table { font-size: 12px; }
+    .history-table th, .history-table td { padding: 7px; }
+  }
+</style>
 
-<!-- 発信一覧 -->
-<h3>発信一覧</h3>
-{% if instructions %}
-<table border="1" cellpadding="5">
-  <tr>
-    <th>内容</th>
-  </tr>
-  {% for inst in instructions %}
-  <tr>
-    <td>{{ inst.content }}{% if inst.shelter %}（避難先: {{ inst.shelter }}）{% endif %}</td>
-  </tr>
-  {% endfor %}
-</table>
-{% else %}
-<p>登録されている指示はありません。</p>
-{% endif %}
+<section class="board-page" aria-labelledby="board-heading">
+  <h2 id="board-heading">発信ボード</h2>
+  <p>住民向けの発信を登録・確認できます。</p>
+
+  {% if error %}
+  <p class="board-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <div class="board-layout">
+    <section class="board-panel">
+      <h3>発信内容を登録</h3>
+      <form class="board-form" method="post" action="{{ url_for('board') }}">
+        <label for="shelter">対象地域・避難所</label>
+        <input id="shelter" name="shelter" type="text" required value="{{ form_data.get('shelter', '') }}">
+
+        <label for="content">災害情報・指示内容</label>
+        <textarea id="content" name="content" required>{{ form_data.get('content', '') }}</textarea>
+
+        <label for="status">緊急レベル</label>
+        <select id="status" name="status" required>
+          <option value="">選択してください</option>
+          {% for level in ['レベル1', 'レベル2', 'レベル3', 'レベル4', 'レベル5'] %}
+          <option value="{{ level }}" {% if form_data.get('status') == level %}selected{% endif %}>{{ level }}</option>
+          {% endfor %}
+        </select>
+
+        <div class="board-actions">
+          <button class="board-button" type="submit">登録</button>
+          <button class="board-button secondary" type="reset">リセット</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="board-panel board-map" aria-labelledby="map-heading">
+      <h3 id="map-heading">地図プレビュー</h3>
+      <div id="boardMap"></div>
+      <div class="map-actions">
+        <button class="board-button" id="mapZoomIn" type="button">拡大</button>
+        <button class="board-button" id="mapReset" type="button">リセット</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="history-section" aria-labelledby="history-heading">
+    <h3 id="history-heading">発信履歴</h3>
+    {% if instructions %}
+    <form id="deleteForm" method="post" action="{{ url_for('board_delete') }}">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>発信日時</th>
+            <th>対象地域・避難所</th>
+            <th>災害情報・指示</th>
+            <th>緊急レベル</th>
+            <th>削除</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inst in instructions %}
+          <tr class="history-row{% if loop.index > 3 %} is-hidden{% endif %}">
+            <td>{{ inst.created_at }}</td>
+            <td>{{ inst.shelter }}</td>
+            <td>{{ inst.content }}</td>
+            <td>{{ inst.status }}</td>
+            <td><input type="checkbox" name="instruction_ids" value="{{ inst.id }}" aria-label="{{ inst.content }}を削除"></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="history-actions">
+        <button class="board-button secondary" id="historyToggle" type="button">さらに表示</button>
+        <button class="board-button" type="submit">選択した履歴を削除</button>
+      </div>
+    </form>
+    {% else %}
+    <p class="history-empty">登録されている指示はありません。</p>
+    {% endif %}
+  </section>
+</section>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const map = L.map('boardMap').setView([40.8244, 140.7400], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+  const initialView = [40.8244, 140.7400];
+
+  document.getElementById('mapZoomIn').addEventListener('click', function() {
+    map.zoomIn();
+  });
+  document.getElementById('mapReset').addEventListener('click', function() {
+    map.setView(initialView, 12);
+  });
+
+  const historyToggle = document.getElementById('historyToggle');
+  if (historyToggle) {
+    historyToggle.addEventListener('click', function() {
+      const hiddenRows = document.querySelectorAll('.history-row.is-hidden');
+      const isExpanded = hiddenRows.length === 0;
+      document.querySelectorAll('.history-row').forEach(function(row, index) {
+        if (index >= 3) row.classList.toggle('is-hidden', isExpanded);
+      });
+      historyToggle.textContent = isExpanded ? 'さらに表示' : '閉じる';
+    });
+  }
+
+  document.getElementById('deleteForm')?.addEventListener('submit', function(event) {
+    if (!confirm('選択した履歴を削除しますか？')) event.preventDefault();
+  });
+});
+</script>
 {% endblock %}

@@ -29,15 +29,12 @@
     }
 
     .site-header {
+      position: relative;
+      z-index: 1000;
       height: 54px;
       color: white;
       background: var(--blue);
       box-shadow: 0 1px 5px rgba(25, 60, 110, .2);
-    }
-
-    .site-header.is-nav-open {
-      height: auto;
-      min-height: 54px;
     }
 
     .header-inner {
@@ -57,34 +54,53 @@
       letter-spacing: .04em;
     }
 
-    .menu-button {
+    .app-hamburger {
+      position: absolute;
+      top: 12px;
+      right: max(16px, calc((100% - 1080px) / 2));
+      z-index: 1002;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      width: 34px;
+      height: 30px;
+      padding: 5px;
       border: 0;
-      color: white;
       background: transparent;
-      font-size: 22px;
-      line-height: 1;
       cursor: pointer;
     }
 
+    .app-hamburger span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: white;
+    }
+
     .site-nav {
+      position: absolute;
+      top: 54px;
+      right: max(16px, calc((100% - 1080px) / 2));
+      z-index: 1001;
       display: none;
-      padding: 12px 16px;
+      min-width: 180px;
+      padding: 10px 0;
       background: var(--blue-dark);
-      text-align: right;
+      box-shadow: 0 4px 10px rgba(25, 60, 110, .25);
     }
 
     .site-nav.is-open { display: block; }
 
     .site-nav a {
-      display: inline-block;
-      margin-bottom: 4px;
-    }
-
-    .site-nav a {
-      margin-left: 16px;
+      display: block;
+      padding: 8px 16px;
       color: white;
       text-decoration: none;
     }
+
+    .site-nav a:hover,
+    .site-nav a:focus { background: rgba(255, 255, 255, .12); }
 
     main {
       width: min(1080px, calc(100% - 32px));
@@ -93,78 +109,13 @@
 
     .home-top {
       display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+      grid-template-columns: 1fr;
       gap: 14px;
       align-items: stretch;
     }
 
-    .home-map-card,
-    .shelter-control-card {
+    .home-map-card {
       min-height: 284px;
-    }
-
-    .shelter-control-card {
-      display: flex;
-      flex-direction: column;
-      padding: 21px 18px;
-    }
-
-    .shelter-control-card label {
-      margin-bottom: 8px;
-      color: var(--text);
-      font-size: 14px;
-      font-weight: 700;
-    }
-
-    .shelter-select {
-      width: 100%;
-      min-height: 42px;
-      padding: 8px 10px;
-      border: 1px solid #aab7c6;
-      border-radius: 4px;
-      color: #33465d;
-      background: white;
-      font: inherit;
-    }
-
-    .shelter-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 22px;
-    }
-
-    .shelter-actions button {
-      flex: 1;
-      min-height: 38px;
-      border: 1px solid #9eafc1;
-      border-radius: 3px;
-      color: #294d75;
-      background: #e6f0f8;
-      cursor: pointer;
-      font: inherit;
-      font-size: 13px;
-    }
-
-    .shelter-actions button:hover { background: #d7e7f3; }
-
-    .shelter-message {
-      min-height: 22px;
-      margin: 42px 0 0;
-      padding: 4px 7px;
-      border: 1px solid transparent;
-      color: #d33b3b;
-      font-size: 12px;
-    }
-
-    .shelter-message.is-error {
-      border-color: #ed4c4c;
-      background: #fff8f8;
-    }
-
-    .shelter-message.is-success {
-      border-color: #5aaa76;
-      color: #287342;
-      background: #f4fff7;
     }
 
     .home-section {
@@ -190,6 +141,71 @@
       overflow: hidden;
       border-radius: 9px;
     }
+
+    .search-page h2 {
+      margin: 0 0 18px;
+      color: var(--text);
+      font-size: 24px;
+    }
+
+    .search-map {
+      height: 360px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      border-radius: 9px;
+      background: #e8eef4;
+    }
+
+    .shelter-search-form {
+      max-width: 560px;
+      padding: 20px;
+      border: 1px solid #edf1f6;
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 5px 18px rgba(42, 72, 105, .07);
+    }
+
+    .shelter-search-form p {
+      margin: 0 0 12px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .shelter-search-form label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .shelter-search-form select {
+      display: block;
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: none;
+      border-radius: 4px;
+      color: #33465d;
+      background: #f1f5f8;
+      font: inherit;
+    }
+
+    .shelter-search-form button {
+      min-width: 110px;
+      min-height: 40px;
+      margin-top: 16px;
+      padding: 8px 20px;
+      border: 0;
+      border-radius: 4px;
+      color: white;
+      background: var(--blue);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    .shelter-search-form button:hover,
+    .shelter-search-form button:focus { background: var(--blue-dark); }
 
     .weather-heading-row {
       display: flex;
@@ -237,11 +253,14 @@
     @media (max-width: 560px) {
       main { width: min(100% - 20px, 1080px); margin-top: 16px; }
       .home-top { grid-template-columns: 1fr; }
-      .home-map-card,
-      .shelter-control-card { min-height: auto; }
+      .home-map-card { min-height: auto; }
       .home-section { padding: 16px 14px 18px; }
       .weather-heading-row { align-items: flex-start; flex-direction: column; gap: 2px; }
       #shelterMap { height: 250px; }
+      .app-hamburger { right: 10px; }
+      .site-nav { right: 10px; }
+      .search-map { height: 280px; }
+      .shelter-search-form { padding: 16px; }
     }
   </style>
 </head>
@@ -249,18 +268,21 @@
   <header class="site-header">
     <div class="header-inner">
       <h1 class="brand">防災アプリ</h1>
-      <button class="menu-button" type="button" aria-label="メニューを開く" aria-expanded="false">☰</button>
+      <button class="app-hamburger" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="app-navigation">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
     </div>
-    <nav class="site-nav">
+    <nav id="app-navigation" class="site-nav" aria-label="アプリメニュー">
       <a href="/">ホーム</a>
-      <a href="/shelter_search">避難所検索</a>
-      <a href="/shelter_register">避難所登録</a>
-      <a href="/board">指示・発信ボード</a>
-    {% if session.logged_in %}
-      <a href="/logout">ログアウト</a>
-    {% else %}
       <a href="/login">ログイン</a>
-    {% endif %}
+      <a href="/shelter_register">避難所登録</a>
+      <a href="/shelter_search">避難所検索</a>
+      <a href="/all_shelters">避難所一覧</a>
+      <a href="/board">指示ボード</a>
+      <a href="/search_results">検索結果</a>
+      <a href="/logout">ログアウト</a>
     </nav>
   </header>
 
@@ -268,13 +290,12 @@
     {% block content %}{% endblock %}
   </main>
   <script>
-    const menuButton = document.querySelector('.menu-button');
+    const menuButton = document.querySelector('.app-hamburger');
     const siteNav = document.querySelector('.site-nav');
-    const siteHeader = document.querySelector('.site-header');
     menuButton.addEventListener('click', function() {
       const isOpen = siteNav.classList.toggle('is-open');
-      siteHeader.classList.toggle('is-nav-open', isOpen);
       menuButton.setAttribute('aria-expanded', String(isOpen));
+      menuButton.setAttribute('aria-label', isOpen ? 'メニューを閉じる' : 'メニューを開く');
     });
   </script>
 </body>

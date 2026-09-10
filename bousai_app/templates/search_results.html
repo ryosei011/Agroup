@@ -3,6 +3,10 @@
 {% block content %}
 <h2>検索結果</h2>
 
+{% if request.args.get('criteria') %}
+  <p>絞り込み項目: {{ request.args.get('criteria') }}</p>
+{% endif %}
+
 {% if results %}
   <ul>
     {% for shelter in results %}

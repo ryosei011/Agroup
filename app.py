@@ -99,8 +99,9 @@ def save_instructions():
     try:
         with open(INSTRUCTIONS_FILE, 'w', encoding='utf-8') as f:
             json.dump(instructions, f, ensure_ascii=False, indent=2)
+        return True
     except Exception:
-        pass
+        return False
 # ────────────────────────────────
 
 # ────────────────────────────────
@@ -239,8 +240,7 @@ def index():
     resident_notices = [i for i in instructions if i.get('target') == '住民']
     return render_template(
         'index.html',
-        resident_notices=resident_notices,
-        shelters=shelters
+        resident_notices=resident_notices
     )
 
 # ログインページ
@@ -326,18 +326,86 @@ def all_shelters():
     return render_template('search_results.html', results=shelters)
 
 
-# 指示ボード：住民向けの指示を一覧で確認する
-@app.route('/board')
+# 指示ボード：住民向けの指示を登録・一覧表示する
+@app.route('/board', methods=['GET', 'POST'])
 @login_required
 def board():
+    if request.method == 'POST':
+        shelter = request.form.get('shelter', '').strip()
+        content = request.form.get('content', '').strip()
+        status = request.form.get('status', '').strip()
+
+        if not shelter or not content or not status:
+            resident_instructions = sorted(
+                (i for i in instructions if i.get('target') == '住民'),
+                key=lambda item: item.get('id', 0),
+                reverse=True
+            )
+            return render_template(
+                'board.html',
+                instructions=resident_instructions,
+                error='対象地域・避難所、災害情報・指示、緊急レベルを入力してください。',
+                form_data=request.form
+            )
+
+        now = get_japan_time()
+        instructions.append({
+            'id': max((item.get('id', 0) for item in instructions), default=0) + 1,
+            'target': '住民',
+            'content': content,
+            'shelter': shelter,
+            'status': status,
+            'created_at': now,
+            'updated_at': now
+        })
+
+        if not save_instructions():
+            instructions.pop()
+            resident_instructions = sorted(
+                (i for i in instructions if i.get('target') == '住民'),
+                key=lambda item: item.get('id', 0),
+                reverse=True
+            )
+            return render_template(
+                'board.html',
+                instructions=resident_instructions,
+                error='発信内容を保存できませんでした。',
+                form_data=request.form
+            )
+
+        return redirect(url_for('board'))
+
     resident_instructions = [i for i in instructions if i.get('target') == '住民']
-    return render_template('board.html', instructions=resident_instructions)
+    resident_instructions.sort(key=lambda item: item.get('id', 0), reverse=True)
+    return render_template('board.html', instructions=resident_instructions, form_data={})
+
+
+@app.route('/board/delete', methods=['POST'])
+@login_required
+def board_delete():
+    selected_ids = {
+        int(value)
+        for value in request.form.getlist('instruction_ids')
+        if value.isdigit()
+    }
+    if selected_ids:
+        instructions[:] = [
+            item for item in instructions
+            if item.get('id') not in selected_ids
+        ]
+        save_instructions()
+    return redirect(url_for('board'))
 
 # 検索結果ページ：templates/search_results.html を返す
 @app.route('/search_results')
 def search_results():
+    criteria = request.args.get('criteria', '').strip()
     results = filter_shelters(request.args.get('district'))
-    return render_template('search_results.html', results=results)
+    return render_template(
+        'search_results.html',
+        results=results,
+        criteria=criteria
+    )
 
 # JSON API：/shelters?district=地区名
 @app.route('/shelters', methods=['GET'])
